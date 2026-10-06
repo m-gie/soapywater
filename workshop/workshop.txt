@@ -1,11 +1,31 @@
 version=1
+id=3814565984
 title=Soapy Water
-description=Clean blood and grime without bleach.
+description=[h1]Soapy Water[/h1]
+description=Clean blood and grime without bleach. Mix plain water with a bar of soap and scrub your base clean with the tools you already have.
 description=
-description=- Right-click a container of water and choose Add soap: 1 soap use per litre turns it into Soapy Water.
-description=- Clean Stains (Soapy Water) works with the usual cleaning tools (mop, broom, sponge, towel, dish cloth...) and uses 0.5 L per tile.
-description=- Don't drink it: it makes you sick.
+description=[h2]Features[/h2]
+description=[list]
+description=[*][b]Add soap[/b]: right-click any container holding water (clean or tainted) and choose [i]Add soap[/i]. Every started litre takes 1 soap use. Soap comes from your emptiest bars first, bags included. If you're short, the option tells you how many uses you need.
+description=[*][b]Clean Stains (Soapy Water)[/b]: with a mop, broom, sponge, bath towel, dish cloth, grill brush or toilet brush, pick stained floor or wall tiles just like with bleach. Each tile uses 0.5 L.
+description=[*]Bleach and cleaning liquid still work exactly as in vanilla.
+description=[*][b]Don't drink it.[/b] Soapy water makes you sick.
+description=[/list]
 description=
-description=Pairs well with Soapmaker, which lets you craft soap, but doesn't need it.
+description=[h2]Good to know[/h2]
+description=[list]
+description=[*]Build 42, single player and multiplayer. The server and every player need the mod.
+description=[*]Lua and scripts only, no Java.
+description=[*]Can be added to an existing save.
+description=[*]English and Polish.
+description=[/list]
+description=
+description=[h2]Pairs well with[/h2]
+description=[url=https://steamcommunity.com/sharedfiles/filedetails/?id=3814563865]Soapmaker[/url]: render lard and craft your own soap. Neither mod needs the other.
+description=
+description=[hr][/hr]
+description=Workshop ID: 3814565984
+description=Mod ID: SoapyWater
+description=Source: [url=https://github.com/m-gie/soapywater]github.com/m-gie/soapywater[/url]
 tags=Build 42;Multiplayer
-visibility=unlisted
+visibility=public
