@@ -44,4 +44,20 @@ module Base
         WorldStaticModel = MagazineCook1Ground,
         Tags = base:magazine,
     }
+
+    item FatRaw
+    {
+        DisplayCategory = Food,
+        ItemType = base:food,
+        Weight = 0.3,
+        Icon = PorkLoin,
+        IsCookable = true,
+        MinutesToCook = 60,
+        MinutesToBurn = 1440,
+        ReplaceOnCooked = Base.Lard,
+        CantEat = true,
+        StaticModel = Pork,
+        WorldStaticModel = Pork,
+        Tooltip = Tooltip_SoapyWater_RawFat,
+    }
 }

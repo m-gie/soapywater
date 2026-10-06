@@ -22,3 +22,28 @@ for _, lang in ipairs({"EN", "PL"}) do
     end
     check(read("42/media/lua/shared/Translate/" .. lang .. "/Recipes.json"):find('"MixSoap"', 1, true) ~= nil, lang .. " recipe name")
 end
+
+-- Render Lard: Trim Fat (known by default) -> Raw Fat, cooked into Lard.
+local trim = recipes:match("craftRecipe TrimFat%s*(%b{})")
+check(trim ~= nil, "TrimFat recipe exists")
+if trim then
+    check(trim:find("NeedToBeLearn") == nil, "TrimFat is known by default")
+    for _, cut in ipairs({"Base.Pork", "Base.PorkChop", "Base.Beef", "Base.Steak", "Base.Venison", "Base.MuttonChop"}) do
+        check(trim:find(cut .. "[;%]]") ~= nil, "TrimFat accepts " .. cut)
+    end
+    check(trim:find("flags%[IsUncookedFoodItem;ItemCount%]") ~= nil, "raw meat only, counted by item")
+    check(trim:find("item 2 %[") ~= nil, "2 pieces of meat")
+    check(trim:find("tags%[base:sharpknife;base:meatcleaver%] mode:keep") ~= nil, "kept knife")
+    check(trim:find("item 1 Base.FatRaw") ~= nil, "gives 1 Raw Fat")
+end
+local fat = items:match("item FatRaw%s*(%b{})")
+check(fat ~= nil, "FatRaw item exists")
+if fat then
+    check(fat:find("ReplaceOnCooked = Base.Lard") ~= nil and fat:find("MinutesToCook = 60") ~= nil, "raw fat cooks into Lard in 60 min")
+    check(fat:find("CantEat = true") ~= nil, "raw fat can't be eaten")
+end
+for _, lang in ipairs({"EN", "PL"}) do
+    check(read("42/media/lua/shared/Translate/" .. lang .. "/ItemName.json"):find('"Base.FatRaw"', 1, true) ~= nil, lang .. " name for Base.FatRaw")
+    check(read("42/media/lua/shared/Translate/" .. lang .. "/Recipes.json"):find('"TrimFat"', 1, true) ~= nil, lang .. " name for TrimFat")
+    check(read("42/media/lua/shared/Translate/" .. lang .. "/Tooltip.json"):find('"Tooltip_SoapyWater_RawFat"', 1, true) ~= nil, lang .. " raw fat tooltip")
+end

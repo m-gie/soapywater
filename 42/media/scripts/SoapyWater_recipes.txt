@@ -19,4 +19,21 @@ module Base
             item 2 Base.SoapRaw,
         }
     }
+
+    craftRecipe TrimFat
+    {
+        timedAction = SliceMeat,
+        time = 100,
+        Tags = InHandCraft;Cooking,
+        category = Cooking,
+        inputs
+        {
+            item 2 [Base.Pork;Base.PorkChop;Base.Beef;Base.Steak;Base.Venison;Base.MuttonChop] flags[IsUncookedFoodItem;ItemCount],
+            item 1 tags[base:sharpknife;base:meatcleaver] mode:keep flags[Prop1;IsNotDull;MayDegradeLight],
+        }
+        outputs
+        {
+            item 1 Base.FatRaw,
+        }
+    }
 }
