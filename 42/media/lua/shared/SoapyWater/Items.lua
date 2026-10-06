@@ -17,12 +17,13 @@ function SoapyWater.isWaterOnly(item)
 end
 
 -- canAddFluid would refuse here because the water can't blend with soapy water,
--- so check the container's own limits instead.
+-- so check the container's own limits instead: the same ones canAddFluid checks.
 function SoapyWater.acceptsSoapyWater(item)
     local fc = item and item:getFluidContainer()
-    if not fc or fc:isInputLocked() then return false end
-    local whitelist = fc:getWhitelist()
-    return whitelist == nil or whitelist:allows(SoapyWater.fluid())
+    local fluid = SoapyWater.fluid()
+    if not fc or not fluid or fc:isInputLocked() or not fc:canPlayerEmpty() then return false end
+    local whitelist, blacklist = fc:getWhitelist(), fc:getBlacklist()
+    return (whitelist == nil or whitelist:allows(fluid)) and (blacklist == nil or blacklist:allows(fluid))
 end
 
 function SoapyWater.soapyAmount(item)
@@ -33,6 +34,11 @@ end
 
 function SoapyWater.hasSoapyWater(item)
     return SoapyWater.soapyAmount(item) >= SoapyWater.LITRES_PER_TILE - EPS
+end
+
+-- The container a cleaning action was given is still held and still holds enough.
+function SoapyWater.usableCleaner(inventory, item)
+    return item ~= nil and inventory:containsRecursive(item) and SoapyWater.hasSoapyWater(item)
 end
 
 -- Soap bars with uses left anywhere in the inventory, including bags.

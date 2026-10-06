@@ -39,20 +39,30 @@ function ISAddSoapAction:perform()
 end
 
 -- Runs on the server in multiplayer. Plans again: the soap may have been used since the menu.
+-- The soap is only used once the soapy water is really in the container.
 function ISAddSoapAction:complete()
-    if not SoapyWater.isWaterOnly(self.container) then return false end
-    local fc = self.container:getFluidContainer()
+    local container = self.container
+    if not SoapyWater.isWaterOnly(container) or not SoapyWater.acceptsSoapyWater(container) then return false end
+    local fc, fluid = container:getFluidContainer(), SoapyWater.fluid()
     local amount = fc:getAmount()
-    local bars, plan = soapPlan(self.character, self.container)
+    local water, tainted = fc:getSpecificFluidAmount(Fluid.Water), fc:getSpecificFluidAmount(Fluid.TaintedWater)
+    local bars, plan = soapPlan(self.character, container)
     if not plan then return false end
+    fc:Empty()
+    fc:addFluid(fluid, amount)
+    if not fc:isPureFluid(fluid) or fc:getAmount() < amount - SoapyWater.EPS then
+        fc:Empty()
+        if water > 0 then fc:addFluid(Fluid.Water, water) end
+        if tainted > 0 then fc:addFluid(Fluid.TaintedWater, tainted) end
+        container:syncItemFields()
+        return false
+    end
     for i, bar in ipairs(bars) do
         for _ = 1, plan[i] do
             bar:UseAndSync()
         end
     end
-    fc:Empty()
-    fc:addFluid(SoapyWater.fluid(), amount)
-    self.container:syncItemFields()
+    container:syncItemFields()
     return true
 end
 

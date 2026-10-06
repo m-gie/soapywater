@@ -14,6 +14,8 @@ local function container(parts, opts)
     function fc:isPureFluid(f) for k, v in pairs(parts) do if k ~= f and v > 0 then return false end end return (parts[f] or 0) > 0 end
     function fc:isInputLocked() return opts.locked == true end
     function fc:getWhitelist() return opts.whitelist end
+    function fc:getBlacklist() return opts.blacklist end
+    function fc:canPlayerEmpty() return opts.sealed ~= true end
     local item = {}
     function item:getFluidContainer() return fc end
     return item
@@ -36,6 +38,14 @@ check(not S.acceptsSoapyWater(container({[WATER] = 1}, {locked = true})), "input
 check(not S.acceptsSoapyWater(container({[WATER] = 1}, {whitelist = {allows = function(_, f) return f ~= SOAPY end}})), "whitelist without SoapyWater refuses")
 check(S.acceptsSoapyWater(container({[WATER] = 1}, {whitelist = {allows = function() return true end}})), "whitelist allowing it accepts")
 
+check(not S.acceptsSoapyWater(container({[WATER] = 1}, {sealed = true})), "sealed container refuses")
+check(not S.acceptsSoapyWater(container({[WATER] = 1}, {blacklist = {allows = function(_, f) return f ~= SOAPY end}})), "blacklist rejecting SoapyWater refuses")
+check(S.acceptsSoapyWater(container({[WATER] = 1}, {blacklist = {allows = function() return true end}})), "blacklist allowing it accepts")
+local realGet = Fluid.Get
+Fluid.Get = function() return nil end
+check(not S.acceptsSoapyWater(container({[WATER] = 1}, {whitelist = {allows = function(_, f) assert(f ~= nil) return true end}})), "missing fluid refuses without calling the filter")
+Fluid.Get = realGet
+
 check(S.soapyAmount(container({[SOAPY] = 0.75})) == 0.75, "soapy amount")
 check(S.soapyAmount(container({[WATER] = 1})) == 0, "water is not soapy")
 check(S.soapyAmount(noFluid) == 0, "no container, no soapy water")
@@ -50,3 +60,12 @@ local got = S.soapBars(inv)
 check(#got == 2 and got[1] == bars[1] and got[2] == bars[2], "soapBars converts the ArrayList in order")
 local uses = S.soapUses(got)
 check(uses[1] == 3 and uses[2] == 20, "soapUses reads current uses")
+
+-- usableCleaner: the action's own container must still be held and still hold enough.
+local soapy = container({[SOAPY] = 1.0})
+local held = {containsRecursive = function(_, it) return it == soapy end}
+local notHeld = {containsRecursive = function() return false end}
+check(S.usableCleaner(held, soapy), "held container with enough soapy water")
+check(not S.usableCleaner(notHeld, soapy), "dropped container is not usable")
+check(not S.usableCleaner(held, container({[SOAPY] = 0.3})), "too little soapy water is not usable")
+check(not S.usableCleaner(held, nil), "no container is not usable")
