@@ -1,0 +1,23 @@
+module Base
+{
+    craftRecipe MakeSoap
+    {
+        timedAction = MixingBowl,
+        time = 300,
+        OnTest = RecipeCodeOnTest.openFire,
+        Tooltip = Tooltip_Recipe_OpenFire,
+        Tags = AnySurfaceCraft;Cooking,
+        category = Cooking,
+        inputs
+        {
+            item 1 [Base.Lard] flags[IsFull],
+            item 1 [Base.Charcoal;Base.CharcoalCrafted],
+            item 1 [Base.Pot;Base.PotForged] mode:keep,
+            -fluid 1.0 categories[Water] mode:mixture,
+        }
+        outputs
+        {
+            item 2 Base.Soap2,
+        }
+    }
+}
