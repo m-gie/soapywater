@@ -1,96 +1,100 @@
 """Draws workshop/preview.png (256x256, required by the PZ Workshop uploader).
 
-Drawn at 4x and scaled down for smooth edges. Run: python workshop/preview.py
+Uses the game's own item icons, read from your Project Zomboid install and scaled
+by whole numbers so the pixel art stays crisp. Run: python workshop/preview.py [game dir]
 """
-import math
 import pathlib
 import random
+import sys
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-S = 1024
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+from pzpack import read_pack  # noqa: E402
+
+GAME = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "E:/SteamLibrary/steamapps/common/ProjectZomboid")
 OUT = pathlib.Path(__file__).with_name("preview.png")
 FONT = "C:/Windows/Fonts/seguibl.ttf"
+S = 256
 
 
-def vertical_gradient(size, top, bottom):
-    img = Image.new("RGB", size)
-    d = ImageDraw.Draw(img)
-    for y in range(size[1]):
-        t = y / (size[1] - 1)
-        d.line([(0, y), (size[0], y)], fill=tuple(int(a + (b - a) * t) for a, b in zip(top, bottom)))
-    return img
+def icons(*names):
+    wanted, found = set(names), {}
+    for pack in ("UI2.pack", "UI.pack"):
+        for _, page, entries in read_pack(GAME / "media/texturepacks" / pack):
+            for name, x, y, w, h, ox, oy, fw, fh in entries:
+                if name in wanted and name not in found:
+                    full = Image.new("RGBA", (fw, fh), (0, 0, 0, 0))
+                    full.paste(page.crop((x, y, x + w, y + h)), (ox, oy))
+                    found[name] = full
+    missing = wanted - found.keys()
+    assert not missing, f"icons not found: {missing}"
+    return found
 
 
-def bubble(layer, cx, cy, r, alpha=255):
-    d = ImageDraw.Draw(layer)
-    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(235, 248, 255, int(alpha * 0.35)), outline=(255, 255, 255, alpha), width=max(3, r // 9))
-    # Highlight.
-    hr = r * 0.32
-    hx, hy = cx - r * 0.38, cy - r * 0.38
-    d.ellipse([hx - hr, hy - hr * 0.7, hx + hr, hy + hr * 0.7], fill=(255, 255, 255, int(alpha * 0.9)))
+def scaled(img, k):
+    return img.resize((img.width * k, img.height * k), Image.Resampling.NEAREST)
+
+
+def place(canvas, img, x, y, shadow=True):
+    """Pastes img with its bottom-centre at (x, y), with a soft ground shadow."""
+    left, top = x - img.width // 2, y - img.height
+    if shadow:
+        sh = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+        ImageDraw.Draw(sh).ellipse([x - img.width * 0.42, y - 7, x + img.width * 0.42, y + 5], fill=(0, 0, 0, 120))
+        canvas.alpha_composite(sh.filter(ImageFilter.GaussianBlur(3)))
+    canvas.alpha_composite(img, (left, top))
+
+
+def pixel_bubble(d, cx, cy, r):
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=(225, 245, 255, 255), width=1)
+    d.point([(cx - r // 2, cy - r // 2), (cx - r // 2 + 1, cy - r // 2)], fill=(255, 255, 255, 255))
 
 
 def main():
-    random.seed(7)
-    img = vertical_gradient((S, S), (28, 92, 140), (10, 32, 58)).convert("RGBA")
-
-    # Soft light behind the bucket.
-    glow = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    ImageDraw.Draw(glow).ellipse([170, 200, 854, 820], fill=(120, 200, 240, 90))
-    img.alpha_composite(glow.filter(ImageFilter.GaussianBlur(90)))
-
+    ic = icons("Item_MetalBucket_Water", "Item_Mop", "Item_Soap", "Item_Sponge")
+    random.seed(3)
+    img = Image.new("RGBA", (S, S))
     d = ImageDraw.Draw(img)
+    # Night-blue wall, then a checkered kitchen floor from y=150.
+    for y in range(S):
+        t = y / S
+        d.line([(0, y), (S, y)], fill=(int(24 + 16 * t), int(46 + 22 * t), int(70 + 18 * t), 255))
+    tile = 16
+    for ty in range(150, S, tile):
+        for tx in range(0, S, tile):
+            light = ((tx // tile) + (ty // tile)) % 2 == 0
+            d.rectangle([tx, ty, tx + tile - 1, ty + tile - 1], fill=(170, 172, 160, 255) if light else (120, 124, 116, 255))
+    d.line([(0, 149), (S, 149)], fill=(60, 50, 44, 255), width=3)
 
-    # Mop handle leaning into the bucket.
-    d.line([(690, 120), (560, 560)], fill=(196, 150, 96), width=34)
-    d.line([(690, 120), (560, 560)], fill=(222, 182, 128), width=12)
+    # Blood stain in front: dirty on the left, a scrubbed-clean streak on the right.
+    for _ in range(260):
+        x = int(random.gauss(150, 34))
+        y = int(random.gauss(236, 8))
+        if 222 < y < 252 and 90 < x < 215:
+            r = random.choice((1, 2, 2, 3))
+            col = (122, 16, 16, 255) if x < 170 else (160, 96, 90, 120)
+            d.rectangle([x, y, x + r, y + r], fill=col)
 
-    # Soft shadow under the bucket.
-    shade = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    ImageDraw.Draw(shade).ellipse([300, 785, 724, 835], fill=(0, 0, 0, 120))
-    img.alpha_composite(shade.filter(ImageFilter.GaussianBlur(14)), (0, 0))
+    place(img, scaled(ic["Item_Mop"], 4), 214, 206)
+    place(img, scaled(ic["Item_MetalBucket_Water"], 4), 108, 214)
+    place(img, scaled(ic["Item_Soap"], 2), 44, 240)
+    place(img, scaled(ic["Item_Sponge"], 2), 206, 250)
 
-    d = ImageDraw.Draw(img)
+    # Bubbles rising from the bucket.
+    b = ImageDraw.Draw(img)
+    for cx, cy, r in [(96, 96, 9), (124, 78, 6), (82, 70, 5), (140, 100, 4), (110, 52, 7), (150, 64, 4),
+                      (70, 58, 4), (168, 56, 6), (40, 82, 5), (196, 76, 4), (232, 64, 6),
+                      (24, 130, 3), (176, 110, 3)]:
+        pixel_bubble(b, cx, cy, r)
 
-    # Bucket: tapered body, rim, handle, bands.
-    top_y, bot_y = 470, 800
-    d.polygon([(300, top_y), (724, top_y), (680, bot_y), (344, bot_y)], fill=(150, 165, 178))
-    d.polygon([(300, top_y), (400, top_y), (430, bot_y), (344, bot_y)], fill=(176, 190, 202))
-    d.polygon([(640, top_y), (724, top_y), (680, bot_y), (620, bot_y)], fill=(118, 132, 146))
-    for y in (590, 720):
-        t = (y - top_y) / (bot_y - top_y)
-        x1, x2 = 300 + 44 * t, 724 - 44 * t
-        d.line([(x1, y), (x2, y)], fill=(104, 118, 132), width=14)
-    d.arc([300, 330, 724, 640], start=200, end=340, fill=(90, 100, 112), width=16)
-    d.rounded_rectangle([284, top_y - 22, 740, top_y + 22], radius=22, fill=(196, 208, 218))
-
-    # Foam: a mound of overlapping bubbles over the rim.
-    foam = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    fd = ImageDraw.Draw(foam)
-    for cx, cy, r in [(330, 440, 70), (420, 400, 95), (530, 380, 105), (640, 405, 90), (712, 445, 64),
-                      (470, 455, 70), (600, 460, 66), (380, 470, 50), (680, 475, 46)]:
-        fd.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(248, 252, 255, 255), outline=(200, 225, 240, 255), width=6)
-    img.alpha_composite(foam)
-
-    # Floating bubbles.
-    layer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    for cx, cy, r in [(205, 300, 46), (150, 470, 28), (830, 260, 58), (880, 470, 30), (760, 150, 26),
-                      (290, 170, 32), (450, 230, 22), (610, 215, 30), (110, 640, 22), (905, 650, 24)]:
-        bubble(layer, cx, cy, r)
-    img.alpha_composite(layer)
-
-    # Title with a soft shadow.
-    font = ImageFont.truetype(FONT, 124)
+    # Title with a dark outline, like the game's UI text.
+    font = ImageFont.truetype(FONT, 30)
     text = "SOAPY WATER"
-    w = d.textlength(text, font=font)
-    x, y = (S - w) / 2, 858
-    shadow = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    ImageDraw.Draw(shadow).text((x + 6, y + 10), text, font=font, fill=(0, 0, 0, 170))
-    img.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(8)))
-    ImageDraw.Draw(img).text((x, y), text, font=font, fill=(245, 251, 255), stroke_width=4, stroke_fill=(20, 60, 96))
+    w = b.textlength(text, font=font)
+    b.text(((S - w) / 2, 8), text, font=font, fill=(240, 248, 255, 255), stroke_width=3, stroke_fill=(16, 28, 44, 255))
 
-    img.convert("RGB").resize((256, 256), Image.Resampling.LANCZOS).save(OUT, optimize=True)
+    img.convert("RGB").save(OUT, optimize=True)
     print(OUT, OUT.stat().st_size, "bytes")
 
 
