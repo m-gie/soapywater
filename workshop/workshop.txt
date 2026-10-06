@@ -1,0 +1,11 @@
+version=1
+title=Soapy Water
+description=Clean blood and grime without bleach.
+description=
+description=- Right-click a container of water and choose Add soap: 1 soap use per litre turns it into Soapy Water.
+description=- Clean Stains (Soapy Water) works with the usual cleaning tools (mop, broom, sponge, towel, dish cloth...) and uses 0.5 L per tile.
+description=- Don't drink it: it makes you sick.
+description=
+description=Pairs well with Soapmaker, which lets you craft soap, but doesn't need it.
+tags=Build 42;Multiplayer
+visibility=unlisted
