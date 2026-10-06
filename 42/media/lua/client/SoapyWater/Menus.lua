@@ -28,6 +28,7 @@ end
 Events.OnFillInventoryObjectContextMenu.Add(addSoapOption)
 
 require "TimedActions/ISCleanWithSoapyWater"
+require "BuildingObjects/ISBuildingObject"
 require "BuildingObjects/ISCleanBloodCursor"
 
 local function predicateSoapy(item)
