@@ -11,6 +11,7 @@ failed = 0
 for test in sorted((ROOT / "tests").glob("test_*.lua")):
     lua = lua51.LuaRuntime()
     lua.execute(f'package.path = "{SHARED}/?.lua;" .. package.path')
+    lua.execute(f'ROOT = "{ROOT.as_posix()}"')
     lua.execute("""
         PASSED, FAILED = 0, 0
         function check(ok, what)

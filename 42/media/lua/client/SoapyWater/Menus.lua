@@ -28,8 +28,6 @@ end
 Events.OnFillInventoryObjectContextMenu.Add(addSoapOption)
 
 require "TimedActions/ISCleanWithSoapyWater"
-require "BuildingObjects/ISBuildingObject"
-require "BuildingObjects/ISCleanBloodCursor"
 
 local function predicateSoapy(item)
     return SoapyWater.hasSoapyWater(item)
@@ -74,17 +72,7 @@ function SoapyWater.doClean(playerObj, square)
     ISTimedActionQueue.add(ISCleanWithSoapyWater:new(playerObj, square, water))
 end
 
--- Vanilla's square picker with our checks.
-SoapyWaterCleanCursor = ISCleanBloodCursor:derive("SoapyWaterCleanCursor")
-
-function SoapyWaterCleanCursor:create(x, y, z, north, sprite)
-    SoapyWater.doClean(self.character, getWorld():getCell():getGridSquare(x, y, z))
-end
-
-function SoapyWaterCleanCursor:isValid(square)
-    return SoapyWater.canClean(self.character, square)
-end
-
+-- SoapyWaterCleanCursor is defined in server/SoapyWater/CleanCursor.lua.
 local function onClean(worldobjects, player)
     local playerObj = getSpecificPlayer(player)
     getCell():setDrag(SoapyWaterCleanCursor:new("", "", playerObj), player)
