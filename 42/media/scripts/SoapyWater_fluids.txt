@@ -1,0 +1,25 @@
+module Base
+{
+    fluid SoapyWater
+    {
+        ColorReference = PowderBlue,
+        DisplayName = Fluid_Name_SoapyWater,
+        Categories
+        {
+            Hazardous,
+        }
+        Poison
+        {
+            maxEffect = Medium,
+            minAmount = 0.2,
+            diluteRatio = 0.1,
+        }
+        BlendWhiteList
+        {
+            whitelist = true,
+            categories
+            {
+            }
+        }
+    }
+}
