@@ -1,12 +1,11 @@
 module Base
 {
-    craftRecipe MakeSoap
+    craftRecipe MixSoap
     {
         timedAction = MixingBowl,
-        time = 300,
-        OnTest = RecipeCodeOnTest.openFire,
-        Tooltip = Tooltip_Recipe_OpenFire,
-        Tags = AnySurfaceCraft;Cooking,
+        time = 150,
+        NeedToBeLearn = true,
+        Tags = InHandCraft;Cooking,
         category = Cooking,
         inputs
         {
@@ -17,7 +16,7 @@ module Base
         }
         outputs
         {
-            item 2 Base.Soap2,
+            item 2 Base.SoapRaw,
         }
     }
 }
