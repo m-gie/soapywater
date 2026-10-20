@@ -1,31 +1,53 @@
 require "SoapyWater/Items"
 require "TimedActions/ISAddSoapAction"
 
-local function onAddSoap(playerObj, item)
-    ISInventoryPaneContextMenu.transferIfNeeded(playerObj, item)
-    ISTimedActionQueue.add(ISAddSoapAction:new(playerObj, item))
+-- Walks next to a container that isn't carried, then soaps it where it is.
+local function onAddSoap(playerObj, fc)
+    local owner = fc:getOwner()
+    local square = SoapyWater.fcSquare(fc)
+    if instanceof(owner, "IsoObject") then
+        if not luautils.walkAdjObject(playerObj, owner, true) then return end
+    elseif square and not SoapyWater.inReach(playerObj, square) then
+        if not luautils.walkAdj(playerObj, square) then return end
+    end
+    ISTimedActionQueue.add(ISAddSoapAction:new(playerObj, fc))
 end
 
--- "Add soap" on a container holding only water. Greyed out with a tooltip when soap is short.
-local function addSoapOption(player, context, items)
-    local item = items[1]
-    if item and not instanceof(item, "InventoryItem") then item = item.items[1] end
-    if not item or not SoapyWater.isSoapable(item:getFluidContainer()) or not SoapyWater.acceptsSoapyWater(item:getFluidContainer()) then return end
-    local playerObj = getSpecificPlayer(player)
-    local needed = SoapyWater.usesNeeded(item:getFluidContainer():getAmount())
-    local uses = SoapyWater.soapUses(SoapyWater.soapBars(playerObj:getInventory()))
-    local have = 0
-    for _, n in ipairs(uses) do have = have + n end
-    local option = context:addOption(getText("ContextMenu_SoapyWater_AddSoap"), playerObj, onAddSoap, item)
-    if have < needed then
+local function litres(x)
+    return string.format("%.1f", x)
+end
+
+-- "Add soap" for one container; says how much turns soapy when the soap won't cover it all,
+-- greyed out with a tooltip when there is no soap. prefix names the container when several share a menu.
+function SoapyWater.addSoapOption(context, playerObj, fc, prefix)
+    local plain = SoapyWater.amounts(fc)
+    local have = SoapyWater.soapTotal(playerObj:getInventory())
+    local converted = SoapyWater.convertPlan(plain, have)
+    local text = getText("ContextMenu_SoapyWater_AddSoap")
+    if have > 0 and converted < plain - SoapyWater.EPS then
+        text = getText("ContextMenu_SoapyWater_AddSoapPartial", litres(converted), litres(plain))
+    end
+    if prefix then text = prefix .. ": " .. text end
+    local option = context:addOption(text, playerObj, onAddSoap, fc)
+    if have <= 0 then
         option.notAvailable = true
         local tooltip = ISInventoryPaneContextMenu.addToolTip()
-        tooltip.description = getText("Tooltip_SoapyWater_NeedSoap", needed, have)
+        tooltip.description = getText("Tooltip_SoapyWater_NoSoap")
         option.toolTip = tooltip
     end
+    return option
 end
 
-Events.OnFillInventoryObjectContextMenu.Add(addSoapOption)
+-- Inventory and loot panel (floor, crates, shelves): the item stays where it is.
+local function inventorySoapOption(player, context, items)
+    local item = items[1]
+    if item and not instanceof(item, "InventoryItem") then item = item.items[1] end
+    local fc = item and item:getFluidContainer()
+    if not SoapyWater.isSoapable(fc) or not SoapyWater.acceptsSoapyWater(fc) then return end
+    SoapyWater.addSoapOption(context, getSpecificPlayer(player), fc, nil)
+end
+
+Events.OnFillInventoryObjectContextMenu.Add(inventorySoapOption)
 
 require "TimedActions/ISCleanWithSoapyWater"
 

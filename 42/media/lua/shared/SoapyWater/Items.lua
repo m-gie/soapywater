@@ -103,3 +103,37 @@ function SoapyWater.soapUses(bars)
     end
     return uses
 end
+
+function SoapyWater.soapTotal(inventory)
+    local total = 0
+    for _, n in ipairs(SoapyWater.soapUses(SoapyWater.soapBars(inventory))) do total = total + n end
+    return total
+end
+
+-- Where a fluid container sits: nil when someone carries it, else its square
+-- (world object, item on the floor, item in a crate, shelf or vehicle, also inside bags there).
+function SoapyWater.fcSquare(fc)
+    local owner = fc and fc:getOwner()
+    if instanceof(owner, "IsoObject") then return owner:getSquare() end
+    if not instanceof(owner, "InventoryItem") then return nil end
+    local item = owner
+    while item do
+        if item:getWorldItem() then return item:getWorldItem():getSquare() end
+        local container = item:getContainer()
+        if not container then return nil end
+        local parent = container:getParent()
+        if instanceof(parent, "IsoGameCharacter") then return nil end
+        if instanceof(parent, "IsoObject") then return parent:getSquare() end
+        item = container:getContainingItem()
+        if not item then return container:getSourceGrid() end
+    end
+    return nil
+end
+
+-- Carried, or on the player's square or a neighbouring one on the same floor.
+function SoapyWater.inReach(character, square)
+    if square == nil then return true end
+    local here = character:getSquare()
+    return here ~= nil and here:getZ() == square:getZ()
+        and math.abs(here:getX() - square:getX()) <= 1 and math.abs(here:getY() - square:getY()) <= 1
+end

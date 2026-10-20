@@ -1,4 +1,5 @@
 {
     "ContextMenu_SoapyWater_AddSoap": "Add soap",
-    "ContextMenu_SoapyWater_Clean": "Clean Stains (Soapy Water)"
+    "ContextMenu_SoapyWater_Clean": "Clean Stains (Soapy Water)",
+    "ContextMenu_SoapyWater_AddSoapPartial": "Add soap (%1 L of %2 L)"
 }

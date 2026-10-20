@@ -88,3 +88,13 @@ check(not S.usableCleaner(held, nil), "no container is not usable")
 local mix = container({[SOAPY] = 0.5, [TAINTED] = 0.5})
 local held2 = {containsRecursive = function(_, it) return it == mix end}
 check(S.usableCleaner(held2, mix), "held 50:50 mix is usable")
+
+local function sq(x, y, z) return {getX = function() return x end, getY = function() return y end, getZ = function() return z end} end
+local me = {getSquare = function() return sq(10, 10, 0) end}
+check(S.inReach(me, nil), "carried container is in reach")
+check(S.inReach(me, sq(11, 9, 0)), "diagonal neighbour in reach")
+check(not S.inReach(me, sq(12, 10, 0)), "two tiles away is out of reach")
+check(not S.inReach(me, sq(10, 10, 1)), "other floor is out of reach")
+local bars2 = {{getCurrentUses = function() return 3 end}, {getCurrentUses = function() return 4 end}}
+local list2 = {size = function() return #bars2 end, get = function(_, i) return bars2[i + 1] end}
+check(S.soapTotal({getAllTypeEvalRecurse = function() return list2 end}) == 7, "soapTotal sums all bars")

@@ -1,4 +1,5 @@
 {
     "ContextMenu_SoapyWater_AddSoap": "Dodaj mydło",
-    "ContextMenu_SoapyWater_Clean": "Wyczyść plamy (woda z mydłem)"
+    "ContextMenu_SoapyWater_Clean": "Wyczyść plamy (woda z mydłem)",
+    "ContextMenu_SoapyWater_AddSoapPartial": "Dodaj mydło (%1 l z %2 l)"
 }
