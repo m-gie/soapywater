@@ -1,13 +1,14 @@
 require "SoapyWater/Items"
 require "TimedActions/ISAddSoapAction"
 
--- Walks next to a container that isn't carried, then soaps it where it is.
+-- Walks next to a container that isn't carried (vanilla skips the walk when already close),
+-- then soaps it where it is.
 local function onAddSoap(playerObj, fc)
     local owner = fc:getOwner()
     local square = SoapyWater.fcSquare(fc)
     if instanceof(owner, "IsoObject") then
         if not luautils.walkAdjObject(playerObj, owner, true) then return end
-    elseif square and not SoapyWater.inReach(playerObj, square) then
+    elseif square then
         if not luautils.walkAdj(playerObj, square) then return end
     end
     ISTimedActionQueue.add(ISAddSoapAction:new(playerObj, fc))

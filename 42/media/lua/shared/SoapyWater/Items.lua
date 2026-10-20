@@ -34,10 +34,12 @@ function SoapyWater.isSoapable(fc)
     return SoapyWater.isSoapableMix(plain, other)
 end
 
--- The container's own limits: input lock, player emptying, whitelist and blacklist.
+-- The container's own limits (input lock, player emptying, whitelist, blacklist),
+-- and what it already holds must mix with soapy water.
 function SoapyWater.acceptsSoapyWater(fc)
     local fluid = SoapyWater.fluid()
     if not fc or not fluid or fc:isInputLocked() or not fc:canPlayerEmpty() then return false end
+    if not fc:canAddFluid(fluid) then return false end
     local whitelist, blacklist = fc:getWhitelist(), fc:getBlacklist()
     return (whitelist == nil or whitelist:allows(fluid)) and (blacklist == nil or blacklist:allows(fluid))
 end
@@ -59,6 +61,7 @@ end
 -- Puts everything back and returns false if the soapy water doesn't go in.
 function SoapyWater.convert(fc, litres)
     local fluid = SoapyWater.fluid()
+    if not fc:canAddFluid(fluid) then return false end
     local plainList = SoapyWater.plainFluids()
     local before = {}
     for i, f in ipairs(plainList) do before[i] = fc:getSpecificFluidAmount(f) end
@@ -121,19 +124,28 @@ function SoapyWater.fcSquare(fc)
         if item:getWorldItem() then return item:getWorldItem():getSquare() end
         local container = item:getContainer()
         if not container then return nil end
-        local parent = container:getParent()
-        if instanceof(parent, "IsoGameCharacter") then return nil end
-        if instanceof(parent, "IsoObject") then return parent:getSquare() end
-        item = container:getContainingItem()
-        if not item then return container:getSourceGrid() end
+        -- A bag's own container keeps the player as parent after it is dropped,
+        -- so climb out of bags first and trust getParent only at the top.
+        local bag = container:getContainingItem()
+        if bag then
+            item = bag
+        else
+            local parent = container:getParent()
+            if instanceof(parent, "IsoGameCharacter") then return nil end
+            if instanceof(parent, "IsoObject") then return parent:getSquare() end
+            return container:getSourceGrid()
+        end
     end
     return nil
 end
 
--- Carried, or on the player's square or a neighbouring one on the same floor.
+-- Carried, or close enough by vanilla's walkAdj rule: within 1.6 tiles of the square's
+-- centre on the same floor, with no wall in between.
 function SoapyWater.inReach(character, square)
     if square == nil then return true end
     local here = character:getSquare()
     return here ~= nil and here:getZ() == square:getZ()
-        and math.abs(here:getX() - square:getX()) <= 1 and math.abs(here:getY() - square:getY()) <= 1
+        and math.abs(square:getX() + 0.5 - character:getX()) <= 1.6
+        and math.abs(square:getY() + 0.5 - character:getY()) <= 1.6
+        and (here == square or here:canReachTo(square))
 end

@@ -15,6 +15,7 @@ local function container(parts, opts)
     function fc:contains(f) return (parts[f] or 0) > 0 end
     function fc:adjustSpecificFluidAmount(f, v) if parts[f] then parts[f] = v end end
     function fc:addFluid(f, v) if opts.refuseSoapy and f == SOAPY then return end parts[f] = (parts[f] or 0) + v end
+    function fc:canAddFluid(f) return not (opts.noAdd and f == SOAPY) end
     function fc:isInputLocked() return opts.locked == true end
     function fc:getWhitelist() return opts.whitelist end
     function fc:getBlacklist() return opts.blacklist end
@@ -89,12 +90,40 @@ local mix = container({[SOAPY] = 0.5, [TAINTED] = 0.5})
 local held2 = {containsRecursive = function(_, it) return it == mix end}
 check(S.usableCleaner(held2, mix), "held 50:50 mix is usable")
 
-local function sq(x, y, z) return {getX = function() return x end, getY = function() return y end, getZ = function() return z end} end
-local me = {getSquare = function() return sq(10, 10, 0) end}
+local function sq(x, y, z, blocked)
+    return {getX = function() return x end, getY = function() return y end, getZ = function() return z end,
+        canReachTo = function(_, other) return not (blocked and blocked[other]) end}
+end
+local function standing(px, py, z, blocked)
+    local here = sq(math.floor(px), math.floor(py), z, blocked)
+    return {getSquare = function() return here end, getX = function() return px end, getY = function() return py end}
+end
+local me = standing(10.5, 10.5, 0)
 check(S.inReach(me, nil), "carried container is in reach")
 check(S.inReach(me, sq(11, 9, 0)), "diagonal neighbour in reach")
 check(not S.inReach(me, sq(12, 10, 0)), "two tiles away is out of reach")
 check(not S.inReach(me, sq(10, 10, 1)), "other floor is out of reach")
+check(S.inReach(standing(12.05, 10.5, 0), sq(10, 10, 0)), "within vanilla's 1.6 walk distance is in reach")
+local wall = sq(11, 10, 0)
+check(not S.inReach(standing(10.5, 10.5, 0, {[wall] = true}), wall), "behind a wall is out of reach")
 local bars2 = {{getCurrentUses = function() return 3 end}, {getCurrentUses = function() return 4 end}}
 local list2 = {size = function() return #bars2 end, get = function(_, i) return bars2[i + 1] end}
 check(S.soapTotal({getAllTypeEvalRecurse = function() return list2 end}) == 7, "soapTotal sums all bars")
+
+check(not S.acceptsSoapyWater(fcOf({[WATER] = 1}, {noAdd = true})), "container whose fluids refuse soapy water refuses")
+fc = fcOf({[WATER] = 2}, {noAdd = true})
+check(not S.convert(fc, 1) and fc:getSpecificFluidAmount(WATER) == 2, "convert leaves the water alone when soapy water can't go in")
+
+-- fcSquare: a bag lying in a crate still has the player as its stale parent.
+instanceof = function(o, cls) return o ~= nil and type(o) == "table" and o._is ~= nil and o._is[cls] == true end
+local crateSq = sq(5, 5, 0)
+local crate = {_is = {IsoObject = true}, getSquare = function() return crateSq end}
+local playerObj = {_is = {IsoObject = true, IsoGameCharacter = true}}
+local crateInv = {getParent = function() return crate end, getContainingItem = function() return nil end}
+local bag = {_is = {InventoryItem = true}, getWorldItem = function() return nil end, getContainer = function() return crateInv end}
+local bagInv = {getParent = function() return playerObj end, getContainingItem = function() return bag end}
+local bucket = {_is = {InventoryItem = true}, getWorldItem = function() return nil end, getContainer = function() return bagInv end}
+check(S.fcSquare({getOwner = function() return bucket end}) == crateSq, "bucket in a bag in a crate sits at the crate")
+local mainInv = {getParent = function() return playerObj end, getContainingItem = function() return nil end}
+local held = {_is = {InventoryItem = true}, getWorldItem = function() return nil end, getContainer = function() return mainInv end}
+check(S.fcSquare({getOwner = function() return held end}) == nil, "carried bucket has no square")
