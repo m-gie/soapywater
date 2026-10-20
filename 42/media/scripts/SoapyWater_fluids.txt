@@ -19,6 +19,7 @@ module Base
             whitelist = true,
             categories
             {
+                Water,
             }
         }
     }

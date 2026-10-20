@@ -10,7 +10,7 @@ end
 local function addSoapOption(player, context, items)
     local item = items[1]
     if item and not instanceof(item, "InventoryItem") then item = item.items[1] end
-    if not SoapyWater.isWaterOnly(item) or not SoapyWater.acceptsSoapyWater(item) then return end
+    if not item or not SoapyWater.isSoapable(item:getFluidContainer()) or not SoapyWater.acceptsSoapyWater(item:getFluidContainer()) then return end
     local playerObj = getSpecificPlayer(player)
     local needed = SoapyWater.usesNeeded(item:getFluidContainer():getAmount())
     local uses = SoapyWater.soapUses(SoapyWater.soapBars(playerObj:getInventory()))
@@ -30,7 +30,7 @@ Events.OnFillInventoryObjectContextMenu.Add(addSoapOption)
 require "TimedActions/ISCleanWithSoapyWater"
 
 local function predicateSoapy(item)
-    return SoapyWater.hasSoapyWater(item)
+    return SoapyWater.isCleaner(item)
 end
 
 local function predicateNotBroken(item)

@@ -3,8 +3,8 @@ require "SoapyWater/Items"
 local S = SoapyWater
 
 -- Fakes for the few game objects the helpers touch.
-local WATER, TAINTED, JUICE, SOAPY = {n = "Water"}, {n = "TaintedWater"}, {n = "Juice"}, {n = "SoapyWater"}
-Fluid = {Water = WATER, TaintedWater = TAINTED, Get = function(name) return name == "SoapyWater" and SOAPY or nil end}
+local WATER, TAINTED, CARB, JUICE, SOAPY = {n = "Water"}, {n = "TaintedWater"}, {n = "CarbonatedWater"}, {n = "Juice"}, {n = "SoapyWater"}
+Fluid = {Water = WATER, TaintedWater = TAINTED, CarbonatedWater = CARB, Get = function(name) return name == "SoapyWater" and SOAPY or nil end}
 
 local function container(parts, opts)
     opts = opts or {}
@@ -12,6 +12,9 @@ local function container(parts, opts)
     function fc:getAmount() local t = 0 for _, v in pairs(parts) do t = t + v end return t end
     function fc:getSpecificFluidAmount(f) return parts[f] or 0 end
     function fc:isPureFluid(f) for k, v in pairs(parts) do if k ~= f and v > 0 then return false end end return (parts[f] or 0) > 0 end
+    function fc:contains(f) return (parts[f] or 0) > 0 end
+    function fc:adjustSpecificFluidAmount(f, v) if parts[f] then parts[f] = v end end
+    function fc:addFluid(f, v) if opts.refuseSoapy and f == SOAPY then return end parts[f] = (parts[f] or 0) + v end
     function fc:isInputLocked() return opts.locked == true end
     function fc:getWhitelist() return opts.whitelist end
     function fc:getBlacklist() return opts.blacklist end
@@ -20,38 +23,51 @@ local function container(parts, opts)
     function item:getFluidContainer() return fc end
     return item
 end
+local function fcOf(parts, opts) return container(parts, opts):getFluidContainer() end
 local noFluid = {getFluidContainer = function() return nil end}
 
 check(S.fluid() == SOAPY, "fluid() looks up SoapyWater")
 
-check(S.isWaterOnly(container({[WATER] = 1.0})), "clean water")
-check(S.isWaterOnly(container({[TAINTED] = 0.4})), "tainted water")
-check(S.isWaterOnly(container({[WATER] = 0.5, [TAINTED] = 0.5})), "clean and tainted mixed")
-check(not S.isWaterOnly(container({[WATER] = 0.9, [JUICE] = 0.1})), "water with juice is not water only")
-check(not S.isWaterOnly(container({})), "empty container")
-check(not S.isWaterOnly(container({[SOAPY] = 1.0})), "already soapy")
-check(not S.isWaterOnly(noFluid), "item without a fluid container")
-check(not S.isWaterOnly(nil), "nil item")
+local p, s, o, t = S.amounts(fcOf({[WATER] = 1, [TAINTED] = 0.5, [CARB] = 0.25, [SOAPY] = 2, [JUICE] = 0.1}))
+check(p == 1.75 and s == 2 and math.abs(o - 0.1) < 1e-9 and math.abs(t - 3.85) < 1e-9, "amounts splits plain, soapy, other")
+check(S.isSoapable(fcOf({[WATER] = 1})), "water is soapable")
+check(S.isSoapable(fcOf({[TAINTED] = 0.4})), "tainted water is soapable")
+check(S.isSoapable(fcOf({[CARB] = 0.3})), "carbonated water is soapable")
+check(S.isSoapable(fcOf({[WATER] = 1, [SOAPY] = 1})), "half soapy is soapable")
+check(not S.isSoapable(fcOf({[SOAPY] = 1})), "pure soapy is not soapable")
+check(not S.isSoapable(fcOf({[WATER] = 0.9, [JUICE] = 0.1})), "water with juice is not soapable")
+check(not S.isSoapable(fcOf({})), "empty container is not soapable")
+check(not S.isSoapable(nil), "nil fc")
 
-check(S.acceptsSoapyWater(container({[WATER] = 1})), "plain container accepts")
-check(not S.acceptsSoapyWater(container({[WATER] = 1}, {locked = true})), "input-locked container refuses")
-check(not S.acceptsSoapyWater(container({[WATER] = 1}, {whitelist = {allows = function(_, f) return f ~= SOAPY end}})), "whitelist without SoapyWater refuses")
-check(S.acceptsSoapyWater(container({[WATER] = 1}, {whitelist = {allows = function() return true end}})), "whitelist allowing it accepts")
-
-check(not S.acceptsSoapyWater(container({[WATER] = 1}, {sealed = true})), "sealed container refuses")
-check(not S.acceptsSoapyWater(container({[WATER] = 1}, {blacklist = {allows = function(_, f) return f ~= SOAPY end}})), "blacklist rejecting SoapyWater refuses")
-check(S.acceptsSoapyWater(container({[WATER] = 1}, {blacklist = {allows = function() return true end}})), "blacklist allowing it accepts")
+check(S.acceptsSoapyWater(fcOf({[WATER] = 1})), "plain container accepts")
+check(not S.acceptsSoapyWater(nil), "nil fc refuses")
+check(not S.acceptsSoapyWater(fcOf({[WATER] = 1}, {locked = true})), "input-locked container refuses")
+check(not S.acceptsSoapyWater(fcOf({[WATER] = 1}, {whitelist = {allows = function(_, f) return f ~= SOAPY end}})), "whitelist without SoapyWater refuses")
+check(S.acceptsSoapyWater(fcOf({[WATER] = 1}, {whitelist = {allows = function() return true end}})), "whitelist allowing it accepts")
+check(not S.acceptsSoapyWater(fcOf({[WATER] = 1}, {sealed = true})), "sealed container refuses")
+check(not S.acceptsSoapyWater(fcOf({[WATER] = 1}, {blacklist = {allows = function(_, f) return f ~= SOAPY end}})), "blacklist rejecting SoapyWater refuses")
+check(S.acceptsSoapyWater(fcOf({[WATER] = 1}, {blacklist = {allows = function() return true end}})), "blacklist allowing it accepts")
 local realGet = Fluid.Get
 Fluid.Get = function() return nil end
-check(not S.acceptsSoapyWater(container({[WATER] = 1}, {whitelist = {allows = function(_, f) assert(f ~= nil) return true end}})), "missing fluid refuses without calling the filter")
+check(not S.acceptsSoapyWater(fcOf({[WATER] = 1}, {whitelist = {allows = function(_, f) assert(f ~= nil) return true end}})), "missing fluid refuses without calling the filter")
 Fluid.Get = realGet
 
-check(S.soapyAmount(container({[SOAPY] = 0.75})) == 0.75, "soapy amount")
-check(S.soapyAmount(container({[WATER] = 1})) == 0, "water is not soapy")
-check(S.soapyAmount(noFluid) == 0, "no container, no soapy water")
-check(S.hasSoapyWater(container({[SOAPY] = 0.5})), "exactly 0.5 L is enough")
-check(S.hasSoapyWater(container({[SOAPY] = 0.4995})), "0.4995 L counts as 0.5 L")
-check(not S.hasSoapyWater(container({[SOAPY] = 0.49})), "0.49 L is not enough")
+check(S.isCleaner(container({[SOAPY] = 0.5})), "0.5 L pure soapy cleans")
+check(S.isCleaner(container({[SOAPY] = 0.4995})), "0.4995 L counts as 0.5 L")
+check(S.isCleaner(container({[SOAPY] = 0.5, [TAINTED] = 0.5})), "50:50 rain mix cleans")
+check(not S.isCleaner(container({[SOAPY] = 0.4, [WATER] = 0.6})), "40% soapy does not clean")
+check(not S.isCleaner(container({[SOAPY] = 0.49})), "0.49 L does not clean")
+check(not S.isCleaner(container({[SOAPY] = 1, [JUICE] = 0.1})), "soapy with juice does not clean")
+check(not S.isCleaner(noFluid), "no fc does not clean")
+check(not S.isCleaner(nil), "nil item does not clean")
+
+local fc = fcOf({[WATER] = 2, [TAINTED] = 1, [SOAPY] = 1})
+check(S.convert(fc, 1.5), "convert succeeds")
+check(math.abs(fc:getSpecificFluidAmount(WATER) - 1) < 1e-9 and math.abs(fc:getSpecificFluidAmount(TAINTED) - 0.5) < 1e-9, "convert keeps the water:tainted ratio")
+check(math.abs(fc:getSpecificFluidAmount(SOAPY) - 2.5) < 1e-9, "convert adds the soapy water")
+fc = fcOf({[WATER] = 2, [TAINTED] = 1}, {refuseSoapy = true})
+check(not S.convert(fc, 1.5), "refused soapy water fails")
+check(fc:getSpecificFluidAmount(WATER) == 2 and fc:getSpecificFluidAmount(TAINTED) == 1 and fc:getSpecificFluidAmount(SOAPY) == 0, "failed convert restores the water")
 
 local bars = {{getCurrentUses = function() return 3 end}, {getCurrentUses = function() return 20 end}}
 local list = {size = function() return #bars end, get = function(_, i) return bars[i + 1] end}
@@ -69,3 +85,6 @@ check(S.usableCleaner(held, soapy), "held container with enough soapy water")
 check(not S.usableCleaner(notHeld, soapy), "dropped container is not usable")
 check(not S.usableCleaner(held, container({[SOAPY] = 0.3})), "too little soapy water is not usable")
 check(not S.usableCleaner(held, nil), "no container is not usable")
+local mix = container({[SOAPY] = 0.5, [TAINTED] = 0.5})
+local held2 = {containsRecursive = function(_, it) return it == mix end}
+check(S.usableCleaner(held2, mix), "held 50:50 mix is usable")

@@ -18,7 +18,7 @@ end
 -- Runs on the server in multiplayer.
 function ISCleanWithSoapyWater:complete()
     local cleaner = self.cleaner
-    if not cleaner or not SoapyWater.hasSoapyWater(cleaner) then return false end
+    if not cleaner or not SoapyWater.isCleaner(cleaner) then return false end
     local fc = cleaner:getFluidContainer()
     local left = fc:getAmount() - SoapyWater.LITRES_PER_TILE
     if left <= SoapyWater.EPS then

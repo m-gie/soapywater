@@ -12,7 +12,7 @@ end
 
 function ISAddSoapAction:isValid()
     if not self.character:getInventory():contains(self.container) then return false end
-    if not SoapyWater.isWaterOnly(self.container) or not SoapyWater.acceptsSoapyWater(self.container) then return false end
+    if not SoapyWater.isSoapable(self.container:getFluidContainer()) or not SoapyWater.acceptsSoapyWater(self.container:getFluidContainer()) then return false end
     local _, plan = soapPlan(self.character, self.container)
     return plan ~= nil
 end
@@ -42,7 +42,7 @@ end
 -- The soap is only used once the soapy water is really in the container.
 function ISAddSoapAction:complete()
     local container = self.container
-    if not SoapyWater.isWaterOnly(container) or not SoapyWater.acceptsSoapyWater(container) then return false end
+    if not SoapyWater.isSoapable(container:getFluidContainer()) or not SoapyWater.acceptsSoapyWater(container:getFluidContainer()) then return false end
     local fc, fluid = container:getFluidContainer(), SoapyWater.fluid()
     local amount = fc:getAmount()
     local water, tainted = fc:getSpecificFluidAmount(Fluid.Water), fc:getSpecificFluidAmount(Fluid.TaintedWater)
