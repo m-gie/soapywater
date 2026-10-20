@@ -110,3 +110,37 @@ local function cleanOption(player, context, worldobjects, test)
 end
 
 Events.OnFillWorldObjectContextMenu.Add(cleanOption)
+
+local function addCandidate(list, seen, fc, name)
+    if fc and not seen[fc] and SoapyWater.isSoapable(fc) and SoapyWater.acceptsSoapyWater(fc) then
+        seen[fc] = true
+        list[#list + 1] = {fc = fc, name = name}
+    end
+end
+
+-- World right-click: rain collectors, barrels and other objects holding water, and items on the floor.
+local function worldSoapOption(player, context, worldobjects, test)
+    if test then return end
+    local square = worldobjects[1] and worldobjects[1]:getSquare()
+    if not square then return end
+    local list, seen = {}, {}
+    local objects = square:getObjects()
+    for i = 0, objects:size() - 1 do
+        local obj = objects:get(i)
+        local fc = obj:getFluidContainer()
+        addCandidate(list, seen, fc, fc and fc:getTranslatedContainerName())
+    end
+    local floor = square:getWorldObjects()
+    for i = 0, floor:size() - 1 do
+        local item = floor:get(i):getItem()
+        if item then addCandidate(list, seen, item:getFluidContainer(), item:getDisplayName()) end
+    end
+    local playerObj = getSpecificPlayer(player)
+    for _, c in ipairs(list) do
+        local prefix = nil
+        if #list > 1 and c.name and c.name ~= "" then prefix = c.name end
+        SoapyWater.addSoapOption(context, playerObj, c.fc, prefix)
+    end
+end
+
+Events.OnFillWorldObjectContextMenu.Add(worldSoapOption)
