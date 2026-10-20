@@ -113,6 +113,15 @@ function SoapyWater.soapTotal(inventory)
     return total
 end
 
+-- An item's fluid container; a dropped item keeps its fluid on the world object (vanilla does the same lookup).
+function SoapyWater.itemFluid(item)
+    if not item then return nil end
+    local fc = item:getFluidContainer()
+    if fc then return fc end
+    local world = item:getWorldItem()
+    return world and world:getFluidContainer() or nil
+end
+
 -- Where a fluid container sits: nil when someone carries it, else its square
 -- (world object, item on the floor, item in a crate, shelf or vehicle, also inside bags there).
 function SoapyWater.fcSquare(fc)

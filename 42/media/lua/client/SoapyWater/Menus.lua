@@ -43,7 +43,7 @@ end
 local function inventorySoapOption(player, context, items)
     local item = items[1]
     if item and not instanceof(item, "InventoryItem") then item = item.items[1] end
-    local fc = item and item:getFluidContainer()
+    local fc = SoapyWater.itemFluid(item)
     if not SoapyWater.isSoapable(fc) or not SoapyWater.acceptsSoapyWater(fc) then return end
     SoapyWater.addSoapOption(context, getSpecificPlayer(player), fc, nil)
 end
@@ -119,22 +119,36 @@ local function addCandidate(list, seen, fc, name)
     end
 end
 
--- World right-click: rain collectors, barrels and other objects holding water, and items on the floor.
-local function worldSoapOption(player, context, worldobjects, test)
-    if test then return end
-    local square = worldobjects[1] and worldobjects[1]:getSquare()
-    if not square then return end
-    local list, seen = {}, {}
+local function addSquare(list, seen, square)
     local objects = square:getObjects()
     for i = 0, objects:size() - 1 do
-        local obj = objects:get(i)
-        local fc = obj:getFluidContainer()
+        local fc = objects:get(i):getFluidContainer()
         addCandidate(list, seen, fc, fc and fc:getTranslatedContainerName())
     end
     local floor = square:getWorldObjects()
     for i = 0, floor:size() - 1 do
         local item = floor:get(i):getItem()
-        if item then addCandidate(list, seen, item:getFluidContainer(), item:getDisplayName()) end
+        if item then addCandidate(list, seen, SoapyWater.itemFluid(item), item:getDisplayName()) end
+    end
+end
+
+-- World right-click: rain collectors, barrels and other objects holding water, and items on the floor.
+-- Takes the objects vanilla offers fluid options for, then everything on the clicked squares.
+local function worldSoapOption(player, context, worldobjects, test)
+    if test then return end
+    local list, seen = {}, {}
+    local fetched = ISWorldObjectContextMenu.fetchVars and ISWorldObjectContextMenu.fetchVars.fluidcontainer
+    for _, obj in ipairs(fetched or {}) do
+        local fc = obj:getFluidContainer()
+        addCandidate(list, seen, fc, fc and fc:getTranslatedContainerName())
+    end
+    local squares = {}
+    for _, obj in ipairs(worldobjects) do
+        local square = obj:getSquare()
+        if square and not squares[square] then
+            squares[square] = true
+            addSquare(list, seen, square)
+        end
     end
     local playerObj = getSpecificPlayer(player)
     for _, c in ipairs(list) do

@@ -127,3 +127,12 @@ check(S.fcSquare({getOwner = function() return bucket end}) == crateSq, "bucket 
 local mainInv = {getParent = function() return playerObj end, getContainingItem = function() return nil end}
 local held = {_is = {InventoryItem = true}, getWorldItem = function() return nil end, getContainer = function() return mainInv end}
 check(S.fcSquare({getOwner = function() return held end}) == nil, "carried bucket has no square")
+
+-- itemFluid: a dropped bucket's water moves onto its world object.
+local held3 = container({[WATER] = 1})
+check(S.itemFluid(held3) == held3:getFluidContainer(), "itemFluid reads the item's own container")
+local worldFc = fcOf({[WATER] = 2})
+local dropped = {getFluidContainer = function() return nil end, getWorldItem = function() return {getFluidContainer = function() return worldFc end} end}
+check(S.itemFluid(dropped) == worldFc, "itemFluid falls back to the world item's container")
+check(S.itemFluid({getFluidContainer = function() return nil end, getWorldItem = function() return nil end}) == nil, "itemFluid: no container anywhere")
+check(S.itemFluid(nil) == nil, "itemFluid: nil item")
